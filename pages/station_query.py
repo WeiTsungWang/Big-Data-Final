@@ -8,7 +8,9 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils import init_app, get_station_data, get_realtime_info_batch, get_weather_forecast
+from utils import init_app, get_station_data, get_realtime_info_batch, get_weather_forecast, apply_theme
+
+apply_theme()
 
 st.set_page_config(page_title="Youbike 站點查詢 | YouBike 智慧出行系統", layout="wide", initial_sidebar_state="expanded")
 st.title("🚲 全台 YouBike 2.0 即時查詢系統")
@@ -127,6 +129,8 @@ if query_btn:
                 # 使用簡單的對數比例，讓範圍大的時候縮小，範圍小的時候放大
                 zoom_level = 11.0 - math.log2(max_delta / 0.3)
 
+                map_style = 'mapbox://styles/mapbox/light-v10' if st.session_state.theme == 'light' else 'mapbox://styles/mapbox/dark-v10'
+
                 # 2. 地圖顯示區塊修正
                 st.subheader(f"站點分佈")
                 st.pydeck_chart(pdk.Deck(
@@ -143,6 +147,7 @@ if query_btn:
                         get_radius=40,
                         pickable=True
                     )],
+                    map_style=map_style, # <--- 動態設定地圖樣式
                     tooltip={"text": "站點名稱: {name_tw}\n站點位置: {address_tw}\n可借: {available_spaces}\n可還: {empty_spaces}"}
                 ))
 

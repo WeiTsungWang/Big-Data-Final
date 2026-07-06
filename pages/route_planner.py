@@ -9,7 +9,9 @@ import os
 import math
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import init_app, get_nearest_n_stations, get_osrm_distance, get_realtime_info_batch, get_station_data, get_weather_forecast
+from utils import init_app, get_nearest_n_stations, get_osrm_distance, get_realtime_info_batch, get_station_data, get_weather_forecast, apply_theme
+
+apply_theme()
 
 st.set_page_config(page_title="路線規劃 | YouBike 智慧出行系統", layout="wide", initial_sidebar_state="expanded")
 

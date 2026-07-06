@@ -7,7 +7,9 @@ import altair as alt
 
 # 加入根目錄以匯入 utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils import get_weather_forecast
+from utils import get_weather_forecast, apply_theme
+
+apply_theme()
 
 st.set_page_config(page_title="天氣預報 | YouBike 智慧出行系統", layout="wide")
 
@@ -97,30 +99,71 @@ if st.button("查詢天氣"):
                 "降雨機率(%)": hourly["precipitation_probability"][idx:idx+12]
             })
 
+            is_dark = st.session_state.theme == 'dark'
+            line_color = '#FF9999'
+            bar_color = '#76C8FF'
+            text_color = '#FFFFFF' if is_dark else '#262730'
+            axis_color = '#FFFFFF' if is_dark else '#262730'
+
             # 1. 繪製溫度線
-            line_temp = alt.Chart(df_hourly).mark_line(point=True, color='#FF9999').encode(
-                x=alt.X("時間", axis=alt.Axis(labelAngle=0)),
-                y=alt.Y("溫度(°C)", title=["溫", "度", "(°C)"], sort='-x', axis=alt.Axis(titleColor='#FF9999', titleAngle=0, orient='left')),
-                tooltip=[
-                    alt.Tooltip("時間", title="時間"),
-                    alt.Tooltip("溫度(°C)", title="溫度 (°C)")
-                ]
+            line_temp = alt.Chart(df_hourly).mark_line(point=True, color=line_color).encode(
+                x=alt.X("時間", axis=alt.Axis(labelAngle=0, labelColor=axis_color, titleColor=axis_color)),
+                y=alt.Y("溫度(°C)", title="溫度 (°C)", axis=alt.Axis(titleColor=line_color, titleAngle=0, orient='left', labelColor=axis_color)),
+                tooltip=["時間", "溫度(°C)"]
             )
 
-            # 2. 繪製降雨機率長條 (Bar Chart)
-            bar_rain = alt.Chart(df_hourly).mark_bar(opacity=0.3, color='#76C8FF').encode(
+            # 2. 繪製降雨機率長條
+            bar_rain = alt.Chart(df_hourly).mark_bar(opacity=0.3, color=bar_color).encode(
                 x=alt.X("時間"),
-                y=alt.Y("降雨機率(%)", title=["降", "雨", "機","率", "(%)"], scale=alt.Scale(domain=[0, 100]), axis=alt.Axis(titleColor='#76C8FF', titleAngle=0, orient='right')),
-                tooltip=[
-                    alt.Tooltip("時間", title="時間"),
-                    alt.Tooltip("降雨機率(%)", title="降雨機率 (%)")
-                ]
+                y=alt.Y("降雨機率(%)", title="降雨機率 (%)", scale=alt.Scale(domain=[0, 100]), 
+                        axis=alt.Axis(titleColor=bar_color, titleAngle=0, orient='right', labelColor=axis_color)),
+                tooltip=["時間", "降雨機率(%)"]
             )
+
+            # 3. 合併圖表並設定背景透明 (確保能透出我們 CSS 設定的背景色)
+            chart = alt.layer(line_temp, bar_rain).resolve_scale(y='independent').properties(
+                height=300
+            ).configure_view(
+                stroke=None,
+                fill='transparent'
+            ).configure_axis(
+                gridColor='#444' if is_dark else '#ddd' # 根據深淺模式調整網格線顏色
+            )
+
+            # 4. 這裡直接使用 theme="streamlit" (這是合法的)
+            st.altair_chart(chart, use_container_width=True, theme="streamlit")
+
+            # 1. 繪製溫度線
+            # line_temp = alt.Chart(df_hourly).mark_line(point=True, color='#FF9999').encode(
+            #     x=alt.X("時間", axis=alt.Axis(labelAngle=0)),
+            #     y=alt.Y("溫度(°C)", title=["溫", "度", "(°C)"], sort='-x', axis=alt.Axis(titleColor='#FF9999', titleAngle=0, orient='left')),
+            #     tooltip=[
+            #         alt.Tooltip("時間", title="時間"),
+            #         alt.Tooltip("溫度(°C)", title="溫度 (°C)")
+            #     ]
+            # )
+
+            # # 2. 繪製降雨機率長條 (Bar Chart)
+            # bar_rain = alt.Chart(df_hourly).mark_bar(opacity=0.3, color='#76C8FF').encode(
+            #     x=alt.X("時間"),
+            #     y=alt.Y("降雨機率(%)", title=["降", "雨", "機","率", "(%)"], scale=alt.Scale(domain=[0, 100]), axis=alt.Axis(titleColor='#76C8FF', titleAngle=0, orient='right')),
+            #     tooltip=[
+            #         alt.Tooltip("時間", title="時間"),
+            #         alt.Tooltip("降雨機率(%)", title="降雨機率 (%)")
+            #     ]
+            # )
+
+            # # 根據 session_state.theme 動態選擇 Altair 主題
+            # theme = 'dark' if st.session_state.theme == 'dark' else 'light'
+
+            # # 繪製圖表時加入 theme 參數
+            # chart = alt.layer(line_temp, bar_rain).resolve_scale(y='independent').properties(height=300).configure_view(stroke=None)
+            # st.altair_chart(chart, use_container_width=True, theme=theme) # <--- 加入 theme=theme
 
             # 3. 合併圖表 (layer)
-            chart = alt.layer(line_temp, bar_rain).resolve_scale(y='independent').properties(height=300)
+            # chart = alt.layer(line_temp, bar_rain).resolve_scale(y='independent').properties(height=300)
 
-            st.altair_chart(chart, use_container_width=True)
+            # st.altair_chart(chart, use_container_width=True)
 
             # 一週預報 (表格化)
             st.subheader("🗓️ 一週天氣預報")
