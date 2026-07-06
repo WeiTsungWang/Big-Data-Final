@@ -6,6 +6,8 @@
 
 [Demo 影片](https://youtu.be/qtW6-yLk6LE)
 
+[線上體驗](https://youbike-smart-mobility.streamlit.app/)
+
 ## 💻 專案結構 (Project Structure)
 
 ```text
@@ -59,7 +61,7 @@ cd [本專案資料夾]
 ```
 例如：
 ```bash
-cd C:\Users\Jason\Desktop\Big-Data-Final
+cd C:\Users\Jason\Desktop\youbike-smart-mobility
 ```
 
 ### 2. 安裝必要套件
