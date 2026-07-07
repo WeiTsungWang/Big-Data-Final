@@ -105,59 +105,71 @@ def get_nearest_n_stations(lat, lon, df, n=10):
     return df.nsmallest(n, "dist")
 
 def inject_theme_and_detect_browser():
-    # 1. 初始化狀態
+    mode_map = {
+        "跟隨瀏覽器 (Auto)": "auto", 
+        "深色模式 (Dark)": "dark", 
+        "淺色模式 (Light)": "light"
+    }
+
+    # 1. 建立設定配置器
+    def apply_theme_config(mode):
+        if mode == "dark":
+            st._config.set_option("theme.base", "dark")
+            st._config.set_option("theme.primaryColor", "#00B4D8")
+            st._config.set_option("theme.backgroundColor", "#0E1117")
+            st._config.set_option("theme.secondaryBackgroundColor", "#262730")
+            st._config.set_option("theme.textColor", "#FFFFFF")
+        elif mode == "light":
+            st._config.set_option("theme.base", "light")
+            st._config.set_option("theme.primaryColor", "#00B4D8")
+            st._config.set_option("theme.backgroundColor", "#FFFFFF")
+            st._config.set_option("theme.secondaryBackgroundColor", "#F0F2F6")
+            st._config.set_option("theme.textColor", "#31333F")
+        else:
+            st._config.set_option("theme.base", None)
+            st._config.set_option("theme.primaryColor", "#00B4D8")
+            st._config.set_option("theme.backgroundColor", None)
+            st._config.set_option("theme.secondaryBackgroundColor", None)
+            st._config.set_option("theme.textColor", None)
+
+    # 2. 初始化所有必要的 Session 狀態
     if "theme_mode" not in st.session_state:
-        st.session_state.theme_mode = "auto"  # auto, dark, light
+        st.session_state.theme_mode = "auto"
+    if "last_applied_theme" not in st.session_state:
+        st.session_state.last_applied_theme = "auto"
 
-    # 2. 透過隱形 JavaScript 偵測瀏覽器偏好
-    if "browser_theme" not in st.session_state:
-        js_code = """
-        <script>
-            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const theme = isDark ? 'dark' : 'light';
-            parent.postMessage({type: 'streamlit:setComponentValue', value: theme}, '*');
-        </script>
-        """
-        browser_detected = components.html(js_code, height=0, width=0)
-        if browser_detected:
-            st.session_state.browser_theme = browser_detected
-            st.rerun()
-        return
+    # 3. 當使用者在側邊欄轉動選單時的立即回呼
+    def on_theme_change():
+        chosen_label = st.session_state.theme_selector_widget
+        chosen_mode = mode_map[chosen_label]
+        st.session_state.theme_mode = chosen_mode
 
-    # 3. 決定最終渲染的主題
-    current_theme = st.session_state.theme_mode
-    if current_theme == "auto":
-        current_theme = st.session_state.get("browser_theme", "light")
+    # 4. 取得當前應套用的模式
+    current_mode = st.session_state.theme_mode
 
-    # 4. 🔥 核心修正：直接動態修改 Streamlit 全域 Theme 設定
-    # 這能確保所有 selectbox, radio, dataframe 完美同步，且不用寫複雜的 CSS
-    if current_theme == "dark":
-        st._config.set_option("theme.base", "dark")
-        st._config.set_option("theme.backgroundColor", "#0E1117")
-        st._config.set_option("theme.secondaryBackgroundColor", "#262730")
-        st._config.set_option("theme.textColor", "#FFFFFF")
-    else:
-        st._config.set_option("theme.base", "light")
-        st._config.set_option("theme.backgroundColor", "#FFFFFF")
-        st._config.set_option("theme.secondaryBackgroundColor", "#F0F2F6")
-        st._config.set_option("theme.textColor", "#31333F")
+    # 5. 🔥 終極同步修正：比對當前模式與上一次成功套用的模式
+    # 如果兩者不一致，說明這是使用者剛剛「快速切換」觸發的新一輪執行
+    # 我們在這裡直接重新套用配置，並強制觸發重新整理，徹底解決前端漏勾（慢半拍）的問題
+    if current_mode != st.session_state.last_applied_theme:
+        apply_theme_config(current_mode)
+        st.session_state.last_applied_theme = current_mode
+        # 注意：這裡的 rerun 是在主程式流程中（非 callback 內），是絕對合法且能即時重新整理前端的
+        st.rerun()
 
-    # 5. 在側邊欄提供手動切換按鈕
+    # 6. 保底確保一般頁面切換或剛載入時的配置環境正常
+    apply_theme_config(current_mode)
+
+    # 7. 提供側邊欄選單
     with st.sidebar:
-        current_options = ["跟隨瀏覽器 (Auto)", "深色模式 (Dark)", "淺色模式 (Light)"]
-        default_idx = 0 if st.session_state.theme_mode == "auto" else (1 if st.session_state.theme_mode == "dark" else 2)
+        st.divider()
+        options_list = list(mode_map.keys())
+        current_label = next((k for k, v in mode_map.items() if v == current_mode), "跟隨瀏覽器 (Auto)")
+        default_idx = options_list.index(current_label)
         
-        selected_option = st.selectbox(
-            "🎨 介面主題",
-            options=current_options,
+        st.selectbox(
+            "🎨 介面主題", 
+            options=options_list, 
             index=default_idx,
-            key="theme_selector_widget"
+            key="theme_selector_widget",
+            on_change=on_theme_change
         )
-        
-        # 對應轉換
-        target_mode = "auto" if selected_option == "跟隨瀏覽器 (Auto)" else ("dark" if selected_option == "深色模式 (Dark)" else "light")
-        
-        # 如果使用者切換了選項，立刻更新並重新整理頁面
-        if target_mode != st.session_state.theme_mode:
-            st.session_state.theme_mode = target_mode
-            st.rerun()
