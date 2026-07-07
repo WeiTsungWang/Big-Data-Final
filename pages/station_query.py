@@ -127,6 +127,46 @@ if query_btn:
                 # 使用簡單的對數比例，讓範圍大的時候縮小，範圍小的時候放大
                 zoom_level = 11.0 - math.log2(max_delta / 0.3)
 
+                # 1. 先在程式碼上方算出目前「實際生效」的主題
+                actual_theme = st.session_state.theme_mode
+                if actual_theme == "auto":
+                    actual_theme = st.session_state.get("browser_theme", "light")
+
+                # 2. 根據主題選擇對應的開源 OSM (CartoDB) 地圖樣式
+                # Light 模式用 Positron (淺色網格道路圖)；Dark 模式用 Dark Matter (深色網格道路圖)
+                osm_style = (
+                    "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" 
+                    if actual_theme == "dark" 
+                    else "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+                )
+
+                # 2. 根據深淺色模式，定義不同的 Tooltip CSS 樣式
+                if actual_theme == "dark":
+                    tooltip_style = {
+                        "html": "站點名稱: {name_tw}<br/>站點位置: {address_tw}<br/>可借: {available_spaces}<br/>可還: {empty_spaces}",
+                        "style": {
+                            "backgroundColor": "#1E222B",
+                            "color": "#FFFFFF",
+                            "border": "1px solid #3F4452",
+                            "borderRadius": "4px",
+                            "padding": "8px",
+                            "zIndex": "10000"
+                        }
+                    }
+                else:
+                    tooltip_style = {
+                        "html": "站點名稱: {name_tw}<br/>站點位置: {address_tw}<br/>可借: {available_spaces}<br/>可還: {empty_spaces}",
+                        "style": {
+                            "backgroundColor": "#FFFFFF",
+                            "color": "#31333F",
+                            "border": "1px solid #E0E2E6",
+                            "boxShadow": "0px 2px 6px rgba(0,0,0,0.1)",
+                            "borderRadius": "4px",
+                            "padding": "8px",
+                            "zIndex": "10000"
+                        }
+                    }
+
                 # 2. 地圖顯示區塊修正
                 st.subheader(f"站點分佈")
                 st.pydeck_chart(pdk.Deck(
@@ -143,7 +183,8 @@ if query_btn:
                         get_radius=40,
                         pickable=True
                     )],
-                    tooltip={"text": "站點名稱: {name_tw}\n站點位置: {address_tw}\n可借: {available_spaces}\n可還: {empty_spaces}"}
+                    map_style=osm_style,
+                    tooltip=tooltip_style
                 ))
 
                 if search_mode == "依地區搜尋":

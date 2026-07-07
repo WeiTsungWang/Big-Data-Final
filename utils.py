@@ -7,6 +7,7 @@ import math
 import pandas as pd
 import sqlite3
 import requests
+import streamlit.components.v1 as components
 
 def init_app():
     # 使用絕對路徑
@@ -102,3 +103,61 @@ def get_nearest_n_stations(lat, lon, df, n=10):
     )
 
     return df.nsmallest(n, "dist")
+
+def inject_theme_and_detect_browser():
+    # 1. 初始化狀態
+    if "theme_mode" not in st.session_state:
+        st.session_state.theme_mode = "auto"  # auto, dark, light
+
+    # 2. 透過隱形 JavaScript 偵測瀏覽器偏好
+    if "browser_theme" not in st.session_state:
+        js_code = """
+        <script>
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = isDark ? 'dark' : 'light';
+            parent.postMessage({type: 'streamlit:setComponentValue', value: theme}, '*');
+        </script>
+        """
+        browser_detected = components.html(js_code, height=0, width=0)
+        if browser_detected:
+            st.session_state.browser_theme = browser_detected
+            st.rerun()
+        return
+
+    # 3. 決定最終渲染的主題
+    current_theme = st.session_state.theme_mode
+    if current_theme == "auto":
+        current_theme = st.session_state.get("browser_theme", "light")
+
+    # 4. 🔥 核心修正：直接動態修改 Streamlit 全域 Theme 設定
+    # 這能確保所有 selectbox, radio, dataframe 完美同步，且不用寫複雜的 CSS
+    if current_theme == "dark":
+        st._config.set_option("theme.base", "dark")
+        st._config.set_option("theme.backgroundColor", "#0E1117")
+        st._config.set_option("theme.secondaryBackgroundColor", "#262730")
+        st._config.set_option("theme.textColor", "#FFFFFF")
+    else:
+        st._config.set_option("theme.base", "light")
+        st._config.set_option("theme.backgroundColor", "#FFFFFF")
+        st._config.set_option("theme.secondaryBackgroundColor", "#F0F2F6")
+        st._config.set_option("theme.textColor", "#31333F")
+
+    # 5. 在側邊欄提供手動切換按鈕
+    with st.sidebar:
+        current_options = ["跟隨瀏覽器 (Auto)", "深色模式 (Dark)", "淺色模式 (Light)"]
+        default_idx = 0 if st.session_state.theme_mode == "auto" else (1 if st.session_state.theme_mode == "dark" else 2)
+        
+        selected_option = st.selectbox(
+            "🎨 介面主題",
+            options=current_options,
+            index=default_idx,
+            key="theme_selector_widget"
+        )
+        
+        # 對應轉換
+        target_mode = "auto" if selected_option == "跟隨瀏覽器 (Auto)" else ("dark" if selected_option == "深色模式 (Dark)" else "light")
+        
+        # 如果使用者切換了選項，立刻更新並重新整理頁面
+        if target_mode != st.session_state.theme_mode:
+            st.session_state.theme_mode = target_mode
+            st.rerun()

@@ -466,11 +466,50 @@ if st.session_state.run_calc:
                             pickable=True,
                         ))
 
+                    # 先判斷目前真實生效的主題是什麼
+                    actual_theme = st.session_state.theme_mode
+                    if actual_theme == "auto":
+                        actual_theme = st.session_state.get("browser_theme", "light")
+                    
+                    osm_style = (
+                        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" 
+                        if actual_theme == "dark" 
+                        else "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+                    )
+
+                    # 2. 根據深淺色模式，定義不同的 Tooltip CSS 樣式
+                    if actual_theme == "dark":
+                        tooltip_style = {
+                            "html": "{name}",
+                            "style": {
+                                "backgroundColor": "#1E222B",
+                                "color": "#FFFFFF",
+                                "border": "1px solid #3F4452",
+                                "borderRadius": "4px",
+                                "padding": "8px",
+                                "zIndex": "10000"
+                            }
+                        }
+                    else:
+                        tooltip_style = {
+                            "html": "{name}",
+                            "style": {
+                                "backgroundColor": "#FFFFFF",
+                                "color": "#31333F",
+                                "border": "1px solid #E0E2E6",
+                                "boxShadow": "0px 2px 6px rgba(0,0,0,0.1)",
+                                "borderRadius": "4px",
+                                "padding": "8px",
+                                "zIndex": "10000"
+                            }
+                        }
+
                     st.pydeck_chart(
                         pdk.Deck(
                             initial_view_state=view_state,
                             layers=layers,
-                            tooltip={"text": "{name}"}
+                            map_style=osm_style,
+                            tooltip=tooltip_style
                         ),
                         use_container_width=True
                     )

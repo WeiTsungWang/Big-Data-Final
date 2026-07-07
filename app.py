@@ -1,4 +1,7 @@
 import streamlit as st
+from utils import inject_theme_and_detect_browser
+
+inject_theme_and_detect_browser()
 
 pg = st.navigation([
     st.Page("pages/home.py", title="首頁", icon="🏠"),
